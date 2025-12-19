@@ -1,0 +1,23 @@
+{
+  "name": "first-web3",
+  "version": "1.0.0",
+  "description": "**Educational Web3 application built with React and Ethereum**",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.3",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.1",
+    "ethers": "^6.16.0",
+    "hardhat": "^3.1.0",
+    "viem": "^2.43.2"
+  },
+  "type": "module"
+}

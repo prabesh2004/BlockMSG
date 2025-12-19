@@ -1,0 +1,58 @@
+const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
+
+async function main() {
+  console.log("🚀 Starting deployment...\n");
+
+  // Get the contract factory
+  const MessageBoard = await hre.ethers.getContractFactory("MessageBoard");
+  
+  console.log("📝 Deploying MessageBoard contract...");
+  
+  // Deploy the contract
+  const messageBoard = await MessageBoard.deploy();
+  
+  // Wait for deployment
+  console.log("⏳ Waiting for deployment transaction to be mined...");
+  await messageBoard.waitForDeployment();
+  
+  // Get the contract address
+  const address = await messageBoard.getAddress();
+  
+  console.log("\n✅ MessageBoard deployed successfully!");
+  console.log("📍 Contract Address:", address);
+  
+  // Save contract address and ABI to frontend
+  const contractData = {
+    address: address,
+    abi: JSON.parse(messageBoard.interface.formatJson())
+  };
+  
+  const frontendDir = path.join(process.cwd(), 'frontend', 'src');
+  const contractsDir = path.join(frontendDir, 'contracts');
+  
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(contractsDir)) {
+    fs.mkdirSync(contractsDir, { recursive: true });
+  }
+  
+  // Write contract data
+  fs.writeFileSync(
+    path.join(contractsDir, 'MessageBoard.json'),
+    JSON.stringify(contractData, null, 2)
+  );
+  
+  console.log("💾 Contract address and ABI saved to frontend/src/contracts/MessageBoard.json");
+  console.log("\n✨ Deployment complete! Your contract is ready to use.\n");
+  
+  return address;
+}
+
+// Run the deployment
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("❌ Deployment failed:", error);
+    process.exit(1);
+  });
