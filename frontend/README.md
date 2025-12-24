@@ -1,16 +1,31 @@
-# React + Vite
+# BlockMSG Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This folder contains the BlockMSG UI (React + Vite).
 
-Currently, two official plugins are available:
+## Run locally
+```bash
+npm install
+npm run dev
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Build
+```bash
+npm run build
+npm run preview
+```
 
-## React Compiler
+## Routing
+The app uses hash-based routing so static hosts work without special rewrite rules:
+- `/#/learn`
+- `/#/deploy`
+- `/#/demo`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Contract configuration (hosting)
+The Demo page needs a deployed `MessageBoard` contract.
 
-## Expanding the ESLint configuration
+For hosted builds (Netlify / GitHub Pages), set these environment variables at build time:
+- `VITE_CONTRACT_ADDRESS` (your deployed contract address)
+- `VITE_CONTRACT_CHAIN_ID` (decimal chain id, e.g. `11155111` for Sepolia)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+If you’re running locally, the Hardhat deploy script writes a fallback address + ABI into:
+- `src/contracts/MessageBoard.json`
