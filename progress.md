@@ -1101,3 +1101,38 @@ MetaMask can be finicky with manual network setup. By using `wallet_addEthereumC
 - Switch network button succeeds ✅
 - Message updates instantly after transaction confirms ✅
 - Wrong network shows warning badge ✅
+
+---
+
+## Step 8: Sepolia + Netlify Hosting Prep ✅
+**Date**: December 22, 2025
+
+### What Was Implemented
+- Added Sepolia network support in Hardhat via environment variables
+- Added Netlify configuration so the frontend deploys as a static site
+- Added SPA redirects for clean refresh behavior
+- Updated the UI so it doesn't assume "Hardhat Local" in hosted builds
+- Added `.env.example` files for both Hardhat and Vite
+
+### Files Created/Modified
+- `hardhat.config.js` - Sepolia network support (env-based)
+- `package.json` - added `dotenv`
+- `netlify.toml` - Netlify build + publish configuration
+- `frontend/public/_redirects` - SPA routing support
+- `frontend/src/App.jsx` - network display + hosted-safe helper visibility
+- `.env.example` - Hardhat env template
+- `frontend/.env.example` - Vite env template
+
+### Why This Step Exists
+Hosting a dApp is different from hosting a normal web app because:
+1. The UI can be static, but it must point to a *public* blockchain network
+2. Local Hardhat deployments aren't reachable from Netlify
+3. The contract address must be stable (deployed to Sepolia) and configured in the build
+
+### Concepts Learned
+- **Hosted frontend is static**: Netlify only serves files; MetaMask provides the blockchain connection.
+- **Env vars in Vite are build-time**: `VITE_*` values get baked into the bundle during `npm run build`.
+- **Testnet deployment**: Deploying to Sepolia gives you a contract address that works for everyone.
+
+### Next Step
+- Deploy MessageBoard to Sepolia and set Netlify env vars (`VITE_CONTRACT_ADDRESS`, `VITE_CONTRACT_CHAIN_ID`).

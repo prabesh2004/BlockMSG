@@ -1,4 +1,4 @@
-import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+  import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 /**
  * DEPLOYMENT SCRIPT FOR MESSAGEBOARD CONTRACT

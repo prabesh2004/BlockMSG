@@ -20,22 +20,21 @@ import path from "path";
 async function main() {
   console.log("🚀 Starting deployment...\n");
 
-  // Get the contract factory
-  // This prepares the contract for deployment
-  const MessageBoard = await hre.ethers.getContractFactory("MessageBoard");
-  
+  // Read ABI from Hardhat artifacts (avoids relying on ethers-specific interfaces)
+  const { abi } = await hre.artifacts.readArtifact("MessageBoard");
+
   console.log("📝 Deploying MessageBoard contract...");
-  
-  // Deploy the contract
-  // This sends a transaction with the contract bytecode
-  const messageBoard = await MessageBoard.deploy();
-  
-  // Wait for deployment to be mined
-  console.log("⏳ Waiting for deployment transaction to be mined...");
-  await messageBoard.waitForDeployment();
-  
-  // Get the contract address
-  const address = await messageBoard.getAddress();
+
+  // Hardhat v3 + hardhat-viem expose viem per-network connection.
+  // hardhat run --network sepolia will make this connect to Sepolia.
+  const { viem } = await hre.network.connect();
+
+  // This will send the deployment transaction and wait for it to be mined.
+  console.log("⏳ Sending deployment transaction...");
+  const messageBoard = await viem.deployContract("MessageBoard");
+
+  // Get the deployed contract address (viem contract instances expose `.address`)
+  const address = messageBoard.address ?? (await messageBoard.getAddress?.());
   
   console.log("\n✅ MessageBoard deployed successfully!");
   console.log("📍 Contract Address:", address);
@@ -43,7 +42,7 @@ async function main() {
   // Save contract address and ABI to frontend
   const contractData = {
     address: address,
-    abi: JSON.parse(messageBoard.interface.formatJson())
+    abi
   };
   
   const frontendDir = path.join(process.cwd(), 'frontend', 'src');

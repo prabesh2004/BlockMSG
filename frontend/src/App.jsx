@@ -2,6 +2,59 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import contractData from './contracts/MessageBoard.json';
 
+// Allow Netlify/production deployments to override the contract address and chain.
+// Vite exposes environment variables that start with VITE_.
+const ENV_CONTRACT_ADDRESS = import.meta.env?.VITE_CONTRACT_ADDRESS;
+const ENV_CHAIN_ID = import.meta.env?.VITE_CONTRACT_CHAIN_ID;
+
+// Default Hardhat local deployment address (so we can warn when hosting).
+const LOCAL_HARDHAT_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
+
+// Fallback to the generated JSON (typically produced by the Hardhat deploy script).
+const CONTRACT_ADDRESS = (ENV_CONTRACT_ADDRESS || contractData.address || '').trim();
+const TARGET_CHAIN_ID = (ENV_CHAIN_ID || '').trim(); // decimal string (e.g., "11155111" for Sepolia)
+
+// Normalize chain IDs so we can compare consistently.
+const normalizeChainId = (value) => {
+  if (!value) return null;
+  if (typeof value === 'bigint') return value;
+  const stringValue = value.toString();
+  if (stringValue.startsWith('0x')) return BigInt(stringValue);
+  return BigInt(stringValue);
+};
+
+const toDecimalChainId = (value) => {
+  const normalized = normalizeChainId(value);
+  return normalized ? normalized.toString() : null;
+};
+
+const isRpcOverloadedError = (err) => {
+  const message = (err?.message || err?.error?.message || '').toLowerCase();
+  const innerCode = err?.error?.code;
+  return (
+    innerCode === -32002 ||
+    message.includes('rpc endpoint returned too many errors') ||
+    message.includes('too many errors')
+  );
+};
+
+const IS_LOCALHOST_HOST =
+  typeof window !== 'undefined' &&
+  ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+const chainLabelFromDecimalId = (decimalChainId) => {
+  switch (decimalChainId) {
+    case '1':
+      return 'Ethereum Mainnet';
+    case '11155111':
+      return 'Sepolia';
+    case '31337':
+      return 'Hardhat Local';
+    default:
+      return `Chain ID ${decimalChainId}`;
+  }
+};
+
 /**
  * MAIN APP COMPONENT
  * 
@@ -83,19 +136,23 @@ function App() {
       const web3Provider = new ethers.BrowserProvider(window.ethereum);
       setProvider(web3Provider);
 
-      // DEBUGGING: Check what network we're actually on
+      // Check what network we're actually on
       const network = await web3Provider.getNetwork();
+      const connectedChainId = network.chainId.toString();
+      const expectedChainId = toDecimalChainId(TARGET_CHAIN_ID);
+
       console.log('🌐 Connected to network:', {
         name: network.name,
-        chainId: network.chainId.toString(),
-        expectedChainId: '31337'
+        chainId: connectedChainId,
+        expectedChainId: expectedChainId || 'not enforced'
       });
-      setNetworkInfo({ name: network.name, chainId: network.chainId.toString() });
 
-      // TEMPORARY: Network check disabled for testing
-      // if (network.chainId.toString() !== '31337') {
-      //   throw new Error(`Wrong network! Please switch to Hardhat Local (Chain ID: 31337). Currently on Chain ID: ${network.chainId}`);
-      // }
+      setNetworkInfo({ name: network.name, chainId: connectedChainId });
+
+      // Enforce the configured chain (important for Netlify/production deployments)
+      if (expectedChainId && connectedChainId !== expectedChainId) {
+        throw new Error(`Wrong network. Connect to chain ID ${expectedChainId} (current: ${connectedChainId}).`);
+      }
 
       // Step 4: Create signer
       // Signer = can sign transactions (needs MetaMask)
@@ -233,9 +290,20 @@ function App() {
    */
   const initializeContract = (signer) => {
     try {
+      if (!CONTRACT_ADDRESS) {
+        setError('Missing contract address. Set VITE_CONTRACT_ADDRESS or regenerate frontend/src/contracts/MessageBoard.json.');
+        return null;
+      }
+
+      // If we're not on localhost and the address is the Hardhat default, warn the user.
+      if (!TARGET_CHAIN_ID && !IS_LOCALHOST_HOST && CONTRACT_ADDRESS.toLowerCase() === LOCAL_HARDHAT_ADDRESS.toLowerCase()) {
+        setError('The contract address points to a local Hardhat deployment. Set VITE_CONTRACT_ADDRESS and VITE_CONTRACT_CHAIN_ID for your hosted environment.');
+        return null;
+      }
+
       // Create contract instance using address, ABI, and signer
       const contractInstance = new ethers.Contract(
-        contractData.address,  // Where the contract lives on blockchain
+        CONTRACT_ADDRESS,      // Where the contract lives on blockchain
         contractData.abi,      // How to talk to the contract
         signer                 // Who is calling the contract
       );
@@ -322,7 +390,14 @@ function App() {
     } catch (err) {
       console.error('Failed to write message:', err);
       setTxStatus('error');
-      setError(err.reason || err.message || 'Failed to write message');
+
+      if (isRpcOverloadedError(err)) {
+        setError(
+          'Your wallet RPC endpoint is overloaded/rate-limited. In MetaMask: switch Sepolia RPC to a different provider (or the default), wait ~30–60s, then try again. If you have stuck/pending txs, reset account in MetaMask (Advanced → Clear activity).'
+        );
+      } else {
+        setError(err.reason || err.message || 'Failed to write message');
+      }
       
       // Clear error after 8 seconds
       setTimeout(() => setTxStatus(null), 8000);
@@ -513,7 +588,14 @@ function App() {
         {/* Network Status */}
         <div className="border border-white/15 bg-black/30 backdrop-blur-xl rounded-2xl p-6">
           <h3 className="text-xl font-semibold mb-3 text-white">Network Status</h3>
-          <p className="text-gray-300 mb-2">Expected: Hardhat Local (Chain ID 31337)</p>
+          {(() => {
+            const expectedChainId =
+              toDecimalChainId(TARGET_CHAIN_ID) || (IS_LOCALHOST_HOST ? '31337' : null);
+            const expectedLabel = expectedChainId
+              ? `${chainLabelFromDecimalId(expectedChainId)} (Chain ID ${expectedChainId})`
+              : 'Not enforced (set VITE_CONTRACT_CHAIN_ID)';
+            return <p className="text-gray-300 mb-2">Expected: {expectedLabel}</p>;
+          })()}
           <div className="flex flex-wrap gap-3 text-sm text-gray-200">
             <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15">
               Current chain: {networkInfo.chainId ?? 'unknown'}
@@ -521,38 +603,53 @@ function App() {
             <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15">
               Name: {networkInfo.name ?? 'unknown'}
             </span>
-            {networkInfo.chainId && networkInfo.chainId !== '31337' && (
-              <span className="px-3 py-1 rounded-lg bg-yellow-900/40 border border-yellow-400/40 text-yellow-200">
-                Wrong network — switch below
-              </span>
-            )}
-            {networkInfo.chainId === '31337' && (
-              <span className="px-3 py-1 rounded-lg bg-green-900/30 border border-green-500/40 text-green-200">
-                Correct network
-              </span>
-            )}
+            {(() => {
+              const expectedChainId =
+                toDecimalChainId(TARGET_CHAIN_ID) || (IS_LOCALHOST_HOST ? '31337' : null);
+              if (!expectedChainId || !networkInfo.chainId) return null;
+              if (networkInfo.chainId !== expectedChainId) {
+                return (
+                  <span className="px-3 py-1 rounded-lg bg-yellow-900/40 border border-yellow-400/40 text-yellow-200">
+                    Wrong network — switch below
+                  </span>
+                );
+              }
+              return (
+                <span className="px-3 py-1 rounded-lg bg-green-900/30 border border-green-500/40 text-green-200">
+                  Correct network
+                </span>
+              );
+            })()}
           </div>
         </div>
 
-        {/* Network Helper */}
-        <div className="border border-white/15 bg-black/30 backdrop-blur-xl rounded-2xl p-6">
-          <h3 className="text-xl font-semibold mb-3 text-white">Network Helper</h3>
-          <p className="text-gray-400 text-sm mb-4">If MetaMask complains about Chain ID, use these buttons.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <button
-              onClick={addHardhatNetwork}
-              className="w-full py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              ➕ Add Hardhat Network (31337)
-            </button>
-            <button
-              onClick={switchToHardhatNetwork}
-              className="w-full py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              🔄 Switch to Hardhat Network
-            </button>
-          </div>
-        </div>
+        {/* Network Helper (Hardhat-only) */}
+        {(() => {
+          const expectedChainId =
+            toDecimalChainId(TARGET_CHAIN_ID) || (IS_LOCALHOST_HOST ? '31337' : null);
+          if (expectedChainId !== '31337') return null;
+
+          return (
+            <div className="border border-white/15 bg-black/30 backdrop-blur-xl rounded-2xl p-6">
+              <h3 className="text-xl font-semibold mb-3 text-white">Network Helper</h3>
+              <p className="text-gray-400 text-sm mb-4">If MetaMask complains about Chain ID, use these buttons.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={addHardhatNetwork}
+                  className="w-full py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  ➕ Add Hardhat Network (31337)
+                </button>
+                <button
+                  onClick={switchToHardhatNetwork}
+                  className="w-full py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  🔄 Switch to Hardhat Network
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Smart Contract Section - Only shown when connected */}
         {walletAddress && (
@@ -671,7 +768,7 @@ function App() {
             {/* Contract Info */}
             <div className="mt-6 border border-white/10 bg-black/20 rounded-lg p-4">
               <p className="text-xs text-gray-500 font-mono break-all">
-                Contract: {contractData.address}
+                Contract: {CONTRACT_ADDRESS || contractData.address}
               </p>
             </div>
           </div>

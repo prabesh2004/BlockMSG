@@ -1,0 +1,13 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Single-page app routing (safe even if you don't use React Router yet)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
