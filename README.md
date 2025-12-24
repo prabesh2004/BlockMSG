@@ -7,7 +7,6 @@ It’s structured as three pages:
 - **Deploy**: how to deploy the contract + wire the frontend
 - **Demo**: connect MetaMask and post/read a message from the blockchain
 
-Repo: https://github.com/prabesh2004/BlockMSG
 
 ## What you’ll learn
 - How a React dApp talks to MetaMask via `window.ethereum`
@@ -79,8 +78,8 @@ This repo includes [netlify.toml](netlify.toml) with:
 - publish: `dist`
 
 Set these Netlify environment variables (so the hosted build talks to Sepolia):
-- `VITE_CONTRACT_ADDRESS` = your deployed contract address
-- `VITE_CONTRACT_CHAIN_ID` = `11155111`
+- `SEPOLIA_RPC_URL` = Your URL
+- `DEPLOYER_PRIVATE_KEY` = Your private key
 
 Important: Vite env vars are baked into the build output. Set them before building on Netlify.
 
