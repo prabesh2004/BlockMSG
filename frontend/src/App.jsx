@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import contractData from './contracts/MessageBoard.json';
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
+
+import Learn from './pages/Learn.jsx';
+import Deploy from './pages/Deploy.jsx';
+import Demo from './pages/Demo.jsx';
 
 // Allow Netlify/production deployments to override the contract address and chain.
 // Vite exposes environment variables that start with VITE_.
@@ -485,339 +490,92 @@ function App() {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
       <div className="max-w-4xl w-full space-y-6">
-        
-        {/* Header Section with Glow Effect */}
-        <div className="text-center space-y-4 mb-12">
+        {/* Header */}
+        <div className="text-center space-y-4 mb-6">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-gray-300 to-white bg-clip-text text-transparent">
-            Web3 Learning dApp
+            BlockMSG
           </h1>
-          <p className="text-gray-400 text-lg">
-            Your first step into decentralized applications
-          </p>
+          <p className="text-gray-400 text-lg">Blockchain learning app with a live example</p>
           <div className="h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-20"></div>
         </div>
 
-        {/* Error Display */}
+        {/* Top Nav */}
+        <div className="border border-white/15 bg-black/30 backdrop-blur-xl rounded-2xl p-2">
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { to: '/learn', label: '📚 Learn' },
+              { to: '/deploy', label: '🧱 Deploy' },
+              { to: '/demo', label: '🧪 Demo' },
+            ].map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  `py-3 rounded-xl border transition-colors font-semibold text-center ${
+                    isActive
+                      ? 'border-white/30 bg-white/10 text-white'
+                      : 'border-white/10 bg-transparent hover:bg-white/5 text-gray-300'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        </div>
+
+        {/* Global Error */}
         {error && (
           <div className="border border-red-500/30 bg-red-950/20 backdrop-blur-sm rounded-lg p-4">
             <div className="flex items-center space-x-2">
               <span className="text-red-400 text-xl">⚠️</span>
-              <span className="text-red-300"><strong>Error:</strong> {error}</span>
+              <span className="text-red-300">
+                <strong>Error:</strong> {error}
+              </span>
             </div>
           </div>
         )}
 
-        {/* Wallet Connection Card */}
-        <div className="border border-white/20 bg-black/40 backdrop-blur-xl rounded-2xl p-8 glow-border">
-          <h2 className="text-2xl font-semibold mb-6 text-white">Wallet Connection</h2>
-          
-          {!walletAddress ? (
-            // Not connected - show connect button
-            <div className="space-y-4">
-              <p className="text-gray-400 text-center mb-6">
-                Connect your MetaMask wallet to get started
-              </p>
-              
-              {!isMetaMaskInstalled() && (
-                <div className="border border-yellow-500/30 bg-yellow-950/20 rounded-lg p-4 mb-4">
-                  <p className="text-yellow-300">
-                    MetaMask not detected. Please install it from{' '}
-                    <a 
-                      href="https://metamask.io" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="underline hover:text-yellow-100 transition-colors"
-                    >
-                      metamask.io
-                    </a>
-                  </p>
-                </div>
-              )}
-              
-              <div className="flex justify-center">
-                <button 
-                  className="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-white/20 transform hover:scale-105"
-                  onClick={connectWallet}
-                  disabled={isConnecting || !isMetaMaskInstalled()}
-                >
-                  {isConnecting ? (
-                    <span className="flex items-center space-x-2">
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>Connecting...</span>
-                    </span>
-                  ) : (
-                    'Connect Wallet'
-                  )}
-                </button>
-              </div>
-            </div>
-          ) : (
-            // Connected - show wallet info
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                  <span className="text-gray-400">Connected Address</span>
-                  <span className="font-mono text-sm text-white bg-white/5 px-4 py-2 rounded-lg border border-white/10">
-                    {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">ETH Balance</span>
-                  <span className="text-2xl font-bold text-white">
-                    {balance ? `${parseFloat(balance).toFixed(4)} ETH` : (
-                      <span className="text-gray-500 text-base">Loading...</span>
-                    )}
-                  </span>
-                </div>
-              </div>
-              
-              <button 
-                className="w-full py-3 border border-white/20 text-white rounded-xl hover:bg-white/5 transition-all duration-300"
-                onClick={disconnectWallet}
-              >
-                Disconnect Wallet
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Network Status */}
-        <div className="border border-white/15 bg-black/30 backdrop-blur-xl rounded-2xl p-6">
-          <h3 className="text-xl font-semibold mb-3 text-white">Network Status</h3>
-          {(() => {
-            const expectedChainId =
-              toDecimalChainId(TARGET_CHAIN_ID) || (IS_LOCALHOST_HOST ? '31337' : null);
-            const expectedLabel = expectedChainId
-              ? `${chainLabelFromDecimalId(expectedChainId)} (Chain ID ${expectedChainId})`
-              : 'Not enforced (set VITE_CONTRACT_CHAIN_ID)';
-            return <p className="text-gray-300 mb-2">Expected: {expectedLabel}</p>;
-          })()}
-          <div className="flex flex-wrap gap-3 text-sm text-gray-200">
-            <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15">
-              Current chain: {networkInfo.chainId ?? 'unknown'}
-            </span>
-            <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15">
-              Name: {networkInfo.name ?? 'unknown'}
-            </span>
-            {(() => {
-              const expectedChainId =
-                toDecimalChainId(TARGET_CHAIN_ID) || (IS_LOCALHOST_HOST ? '31337' : null);
-              if (!expectedChainId || !networkInfo.chainId) return null;
-              if (networkInfo.chainId !== expectedChainId) {
-                return (
-                  <span className="px-3 py-1 rounded-lg bg-yellow-900/40 border border-yellow-400/40 text-yellow-200">
-                    Wrong network — switch below
-                  </span>
-                );
-              }
-              return (
-                <span className="px-3 py-1 rounded-lg bg-green-900/30 border border-green-500/40 text-green-200">
-                  Correct network
-                </span>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* Network Helper (Hardhat-only) */}
-        {(() => {
-          const expectedChainId =
-            toDecimalChainId(TARGET_CHAIN_ID) || (IS_LOCALHOST_HOST ? '31337' : null);
-          if (expectedChainId !== '31337') return null;
-
-          return (
-            <div className="border border-white/15 bg-black/30 backdrop-blur-xl rounded-2xl p-6">
-              <h3 className="text-xl font-semibold mb-3 text-white">Network Helper</h3>
-              <p className="text-gray-400 text-sm mb-4">If MetaMask complains about Chain ID, use these buttons.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <button
-                  onClick={addHardhatNetwork}
-                  className="w-full py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  ➕ Add Hardhat Network (31337)
-                </button>
-                <button
-                  onClick={switchToHardhatNetwork}
-                  className="w-full py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  🔄 Switch to Hardhat Network
-                </button>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Smart Contract Section - Only shown when connected */}
-        {walletAddress && (
-          <div className="border border-white/20 bg-black/40 backdrop-blur-xl rounded-2xl p-8 glow-border">
-            <h2 className="text-2xl font-semibold mb-6 text-white">📝 Message Board Contract</h2>
-            
-            {/* Current Message Display */}
-            <div className="mb-6 border border-blue-500/30 bg-blue-950/10 rounded-xl p-6">
-              <h3 className="text-lg font-semibold mb-4 text-blue-300">Current Message on Blockchain</h3>
-              {isLoadingMessage ? (
-                <div className="text-gray-400 animate-pulse">Loading message...</div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-                    <p className="text-white text-lg font-medium break-words">
-                      "{currentMessage || 'No message set yet'}"
-                    </p>
-                  </div>
-                  {lastWriter && lastWriter !== '0x0000000000000000000000000000000000000000' && (
-                    <div className="text-sm text-gray-400 space-y-1">
-                      <p>
-                        <span className="text-gray-500">Last writer:</span>{' '}
-                        <span className="font-mono">{lastWriter.slice(0, 6)}...{lastWriter.slice(-4)}</span>
-                      </p>
-                      {lastUpdated && (
-                        <p>
-                          <span className="text-gray-500">Updated:</span>{' '}
-                          {new Date(Number(lastUpdated) * 1000).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Write New Message */}
-            <div className="border border-purple-500/30 bg-purple-950/10 rounded-xl p-6">
-              <h3 className="text-lg font-semibold mb-4 text-purple-300">Write New Message</h3>
-              <div className="space-y-4">
-                <div>
-                  <textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Enter your message to store on the blockchain..."
-                    className="w-full bg-black/40 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
-                    rows="3"
-                    disabled={isSending}
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    💡 This will cost gas! MetaMask will ask you to approve the transaction.
-                  </p>
-                </div>
-
-                <button
-                  onClick={writeMessage}
-                  disabled={isSending || !newMessage.trim()}
-                  className={`w-full py-3 rounded-xl font-semibold transition-all duration-300 ${
-                    isSending || !newMessage.trim()
-                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white glow-border'
-                  }`}
-                >
-                  {isSending ? '⏳ Sending Transaction...' : '🚀 Post Message to Blockchain'}
-                </button>
-
-                {/* Transaction Status */}
-                {txStatus === 'pending' && (
-                  <div className="bg-yellow-950/30 border border-yellow-500/50 rounded-lg p-4">
-                    <p className="text-yellow-300 font-semibold flex items-center space-x-2">
-                      <span className="animate-spin">⏳</span>
-                      <span>Transaction Pending...</span>
-                    </p>
-                    <p className="text-yellow-200/70 text-sm mt-2">
-                      Waiting for blockchain confirmation. This may take a few seconds.
-                    </p>
-                    {txHash && (
-                      <p className="text-xs text-yellow-200/50 mt-2 font-mono break-all">
-                        TX: {txHash}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {txStatus === 'success' && (
-                  <div className="bg-green-950/30 border border-green-500/50 rounded-lg p-4">
-                    <p className="text-green-300 font-semibold flex items-center space-x-2">
-                      <span>✅</span>
-                      <span>Transaction Successful!</span>
-                    </p>
-                    <p className="text-green-200/70 text-sm mt-2">
-                      Your message has been written to the blockchain!
-                    </p>
-                    {txHash && (
-                      <p className="text-xs text-green-200/50 mt-2 font-mono break-all">
-                        TX: {txHash}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {txStatus === 'error' && (
-                  <div className="bg-red-950/30 border border-red-500/50 rounded-lg p-4">
-                    <p className="text-red-300 font-semibold flex items-center space-x-2">
-                      <span>❌</span>
-                      <span>Transaction Failed</span>
-                    </p>
-                    {error && (
-                      <p className="text-red-200/70 text-sm mt-2">{error}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Contract Info */}
-            <div className="mt-6 border border-white/10 bg-black/20 rounded-lg p-4">
-              <p className="text-xs text-gray-500 font-mono break-all">
-                Contract: {CONTRACT_ADDRESS || contractData.address}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Learning Section */}
-        <div className="border border-white/10 bg-black/20 backdrop-blur-xl rounded-2xl p-8">
-          <h3 className="text-xl font-semibold mb-4 flex items-center space-x-2">
-            <span>📚</span>
-            <span>What Just Happened?</span>
-          </h3>
-          <div className="text-gray-300 space-y-3 text-sm leading-relaxed">
-            {walletAddress ? (
-              <>
-                <div>
-                  <p className="font-semibold text-white mb-2">You're connected to the blockchain!</p>
-                  <ul className="space-y-1 ml-4">
-                    <li>• Your wallet address is now visible to this app</li>
-                    <li>• We can read your ETH balance (free operation)</li>
-                    <li>• Your private key stays safe in MetaMask - we never see it</li>
-                  </ul>
-                </div>
-                
-                {contract && (
-                  <div className="border-t border-white/10 pt-3">
-                    <p className="font-semibold text-white mb-2">Smart Contract Interaction:</p>
-                    <ul className="space-y-1 ml-4">
-                      <li>• <span className="text-blue-300">Reading messages</span> is FREE - no gas needed!</li>
-                      <li>• <span className="text-purple-300">Writing messages</span> costs gas - you're changing blockchain data</li>
-                      <li>• Each write transaction needs your approval in MetaMask</li>
-                      <li>• Once confirmed, your message is stored forever on the blockchain</li>
-                      <li>• Anyone can read it, but only you can write (with your signature)</li>
-                    </ul>
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="font-semibold text-white">Ready to connect?</p>
-                <ul className="space-y-1 ml-4">
-                  <li>• Clicking "Connect" opens MetaMask</li>
-                  <li>• You choose which account to connect</li>
-                  <li>• Your private key never leaves MetaMask</li>
-                  <li>• You can disconnect anytime</li>
-                </ul>
-              </>
-            )}
-          </div>
-        </div>
+        <Routes>
+          <Route path="/" element={<Navigate to="/learn" replace />} />
+          <Route path="/learn" element={<Learn />} />
+          <Route path="/deploy" element={<Deploy />} />
+          <Route
+            path="/demo"
+            element={
+              <Demo
+                walletAddress={walletAddress}
+                balance={balance}
+                isConnecting={isConnecting}
+                connectWallet={connectWallet}
+                disconnectWallet={disconnectWallet}
+                isMetaMaskInstalled={isMetaMaskInstalled}
+                networkInfo={networkInfo}
+                TARGET_CHAIN_ID={TARGET_CHAIN_ID}
+                IS_LOCALHOST_HOST={IS_LOCALHOST_HOST}
+                toDecimalChainId={toDecimalChainId}
+                chainLabelFromDecimalId={chainLabelFromDecimalId}
+                addHardhatNetwork={addHardhatNetwork}
+                switchToHardhatNetwork={switchToHardhatNetwork}
+                contract={contract}
+                contractData={contractData}
+                CONTRACT_ADDRESS={CONTRACT_ADDRESS}
+                isLoadingMessage={isLoadingMessage}
+                currentMessage={currentMessage}
+                lastWriter={lastWriter}
+                lastUpdated={lastUpdated}
+                newMessage={newMessage}
+                setNewMessage={setNewMessage}
+                writeMessage={writeMessage}
+                isSending={isSending}
+                txStatus={txStatus}
+                txHash={txHash}
+                error={error}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/learn" replace />} />
+        </Routes>
       </div>
     </div>
   );
