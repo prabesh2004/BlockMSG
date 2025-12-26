@@ -22,3 +22,11 @@
 # Environment variables (never commit secrets)
 .env
 .env.*
+
+# Local progress/notes (do not commit)
+/progress.md
+/learn.md
+/project_context.md
+/projectcontext.md
+/frontend/blockchain.md
+/frontend/src/content/blockchain.md
